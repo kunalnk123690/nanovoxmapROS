@@ -1,0 +1,3 @@
+[submodule "nanovoxmap_ros/nanovoxmap"]
+	path = nanovoxmap_ros/nanovoxmap
+	url = https://github.com/kunalnk123690/nanovoxmap.git
