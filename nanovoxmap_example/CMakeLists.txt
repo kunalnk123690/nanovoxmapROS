@@ -1,47 +1,38 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.18)
 project(nanovoxmap_example)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
+set(CMAKE_BUILD_TYPE Release)
+add_compile_options(-O3 -w)
 
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  nav_msgs
+  roscpp
+  sensor_msgs
+  tf
+)
 
-set(dependencies 
-  "rclcpp"
-  "geometry_msgs"
-  "nav_msgs"
-  "tf2"
-  "tf2_ros"
+catkin_package(
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp sensor_msgs tf
 )
 
 
-# Add the ground-truth node for RViz.
-add_executable(camera_lidar_ground_truth_node
-  src/main.cpp
-  src/SubscribeAndPublish.cpp)
-target_include_directories(camera_lidar_ground_truth_node PRIVATE include)
-ament_target_dependencies(camera_lidar_ground_truth_node ${dependencies})
-install(TARGETS camera_lidar_ground_truth_node DESTINATION lib/${PROJECT_NAME} )
-
-install(DIRECTORY
-  launch 
-  config
-  urdf
-  meshes
-  worlds
-  DESTINATION share/${PROJECT_NAME}/
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
 )
 
-install(FILES LICENSE DESTINATION share/${PROJECT_NAME})
+file(GLOB_RECURSE SRC_FILES "src/*.cpp")
+add_executable(tf_publisher ${SRC_FILES})
+target_link_libraries(tf_publisher ${catkin_LIBRARIES})
 
 
-ament_package()
+install(TARGETS tf_publisher RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY urdf DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY meshes DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY worlds DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

@@ -1,0 +1,51 @@
+<launch>
+  <!-- Launch Gazebo with the specified world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug" value="0" />
+    <arg name="gui" value="true" />
+    <arg name="use_sim_time" value="true" />
+    <arg name="headless" value="false" />
+    <arg name="world_name" value="$(find nanovoxmap_example)/worlds/parking_lot.world" />
+  </include>
+
+  <!-- Load Jackal's description-->
+  <param name="robot_description" command="$(find xacro)/xacro $(find nanovoxmap_example)/urdf/jackal.urdf.xacro --inorder" />
+
+  <!-- For Rviz -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen"/>
+
+  <!-- Load the controllers -->
+  <rosparam command="load" file="$(find nanovoxmap_example)/config/control.yaml" />
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" args="jackal_joint_publisher jackal_velocity_controller" />
+
+
+  <!-- Spawn Jackal -->
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model jackal -param robot_description
+               -x 0.0
+               -y 0.0
+               -z 0.5"/>
+
+  <!-- TF -->
+  <node pkg="nanovoxmap_example" type="tf_publisher" name="jackal_tf_broadcaster" output="screen"/>
+
+
+  <node pkg="twist_mux" type="twist_mux" name="twist_mux">
+    <rosparam command="load" file="$(find nanovoxmap_example)/config/twist_mux.yaml" />
+    <remap from="cmd_vel_out" to="jackal_velocity_controller/cmd_vel"/>
+  </node>
+
+  <!-- Interactive markers -->
+  <node pkg="interactive_marker_twist_server" type="marker_server" name="twist_marker_server">
+    <param name="link_name" value="base_link" />
+    <remap from="/cmd_vel" to="/jackal_velocity_controller/cmd_vel"/>
+  </node>
+
+  <!-- nanovoxmap -->
+  <node name="nanovoxmap_node" pkg="nanovoxmap_ros" type="nanovoxmap_ros_node" output="screen">
+    <rosparam file="$(find nanovoxmap_ros)/config/mapping.yaml"/>
+  </node>
+
+  <!-- Rviz -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find nanovoxmap_example)/config/jackal_lidar.rviz" />
+
+</launch>

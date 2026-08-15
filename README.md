@@ -1,54 +1,57 @@
-# NanoVoxMap ROS 2 wrapper
+# NanoVoxMap ROS 1 Noetic wrapper
 
-This package wraps [NanoVoxMap](https://github.com/kunalnk123690/nanovoxmap) as a ROS 2 node. It synchronizes a `sensor_msgs/PointCloud2` stream with `nav_msgs/Odometry`, builds an occupancy map, and publishes occupied voxels and an optional ESDF point cloud.
+This branch wraps [NanoVoxMap](https://github.com/kunalnk123690/nanovoxmap) as a ROS 1 Noetic node.
 
-## Build
+The wrapper synchronizes `sensor_msgs/PointCloud2` with `nav_msgs/Odometry`, integrates occupied and free voxels, and publishes the occupied map and an optional signed ESDF point cloud.
 
-Install ROS 2 and the package dependencies, then clone recursively into a ROS 2 workspace:
+For the ROS 2 Jazzy wrapper, see the repository's [`main` branch](https://github.com/kunalnk123690/nanovoxmapROS/tree/main).
+
+## Clone
+
+NanoVoxMap is embedded as a Git submodule, so clone recursively:
 
 ```bash
-cd ~/ros2_ws/src
-git clone --recurse-submodules https://github.com/kunalnk123690/nanovoxmapROS.git
-cd ..
-rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install
-source install/setup.bash
+cd ~/catkin_ws/src
+git clone --branch noetic --recurse-submodules \
+  https://github.com/kunalnk123690/nanovoxmapROS.git
 ```
 
-If the repository was cloned without submodules, run:
+For an existing clone made without submodules:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-## Run
+## Build
 
-Edit `nanovoxmap_ros/config/mapping.yaml` for your point-cloud, odometry, output, and frame names, then run:
-
-```bash
-ros2 run nanovoxmap_ros nanovoxmap_ros_node --ros-args \
-  --params-file "$(ros2 pkg prefix nanovoxmap_ros)/share/nanovoxmap_ros/config/mapping.yaml"
-```
-or include the node in your launch file
-```
-nanovoxmap_node = Node(
-    package='nanovoxmap_ros',
-    executable='nanovoxmap_ros_node',
-    name='nanovoxmap_node',
-    output='screen',
-    parameters=[os.path.join(get_package_share_directory('nanovoxmap_ros'), 'config', 'mapping.yaml')]
-)
-```
-
-The odometry pose must describe the point-cloud sensor in the configured world frame. See the YAML file for optional downsampling, ray clearing, occupancy, and ESDF settings.
-
-## Example
-
-The separate `nanovoxmap_example` package includes a Jackal Gazebo simulation. After building and sourcing the workspace, run:
+Install dependencies and build from the workspace root. NanoVoxMap requires CMake 3.18 or newer (newer than Ubuntu 20.04's stock CMake):
 
 ```bash
-ros2 launch nanovoxmap_example run_simulation.launch.py
+rosdep install --from-paths src --ignore-src -r -y
+catkin_make
+source devel/setup.bash
 ```
+
+Edit `nanovoxmap_ros/config/mapping.yaml` for the input topics, frame, mapping, clearing, and ESDF settings. Run only the mapper with:
+
+```bash
+rosparam load "$(rospack find nanovoxmap_ros)/config/mapping.yaml" /nanovoxmap_node
+rosrun nanovoxmap_ros nanovoxmap_ros_node
+```
+or include the following in your launch file:
+```
+<node name="nanovoxmap_node" pkg="nanovoxmap_ros" type="nanovoxmap_ros_node" output="screen">
+  <rosparam file="$(find nanovoxmap_ros)/config/mapping.yaml"/>
+</node>
+```
+
+The `nanovoxmap_example` package contains the Jackal Gazebo example:
+
+```bash
+roslaunch nanovoxmap_example mapping.launch
+```
+
+The odometry pose must describe the point-cloud sensor in the configured world frame; the wrapper does not apply an additional sensor-to-base transform.
 
 ## License
 

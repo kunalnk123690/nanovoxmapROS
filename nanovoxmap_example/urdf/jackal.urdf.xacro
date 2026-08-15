@@ -10,13 +10,13 @@
   <xacro:property name="chassis_length" value="0.420" />
   <xacro:property name="chassis_width" value="0.310" />
   <xacro:property name="chassis_height" value="0.184" />
-  <xacro:include filename="$(find nanovoxmap_example)/urdf/wheel.xacro" />
+
 
   <material name="dark_grey">
     <color rgba="0.2 0.2 0.2 1.0"/>
   </material>
-  <material name="aluminum">
-    <color rgba="0.66 0.67 0.71 1.0"/>
+  <material name="light_grey">
+    <color rgba="0.4 0.4 0.4 1.0"/>
   </material>
   <material name="yellow">
     <color rgba="0.8 0.8 0.0 1.0"/>
@@ -40,7 +40,7 @@
     <visual>
       <origin xyz="0 0 ${footprint_vertical_offset}" rpy="${pi/2} 0 ${pi/2}"/>
       <geometry>
-        <mesh filename="file://$(find nanovoxmap_example)/meshes/jackal-base.stl"/>
+        <mesh filename="package://nanovoxmap_example/meshes/jackal-base.stl"/>
       </geometry>
       <material name="dark_grey" />
     </visual>
@@ -51,12 +51,64 @@
       </geometry>
     </collision>
     <inertial>
+      <!-- Center of mass -->
       <origin xyz="0.012  0.002 0.067" rpy="0 0 0"/>
       <mass value="16.523"/>
+      <!-- Moments of inertia: ( chassis without wheels ) -->
       <inertia ixx="0.3136" ixy="-0.0008" ixz="0.0164" iyy="0.3922" iyz="-0.0009" izz="0.4485"/>
     </inertial>
   </link>
+  <gazebo reference="chassis_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
 
+
+  <xacro:macro name="wheel" params="prefix *joint_pose">
+
+    <link name="${prefix}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <mesh filename="package://nanovoxmap_example/meshes/jackal-wheel.stl"/>
+        </geometry>
+        <material name="black" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.477"/>
+        <inertia ixx="0.0013" ixy="0" ixz="0" iyy="0.0024" iyz="0" izz="0.0013"/>
+      </inertial>
+    </link>
+
+    <gazebo reference="${prefix}_wheel_link">
+      <material>Gazebo/DarkGrey</material>
+    </gazebo>
+
+    <joint name="${prefix}_wheel" type="continuous">
+      <parent link="chassis_link"/>
+      <child link="${prefix}_wheel_link" />
+      <xacro:insert_block name="joint_pose" />
+      <axis xyz="0 1 0" />
+    </joint>
+
+    <!-- In reality, Jackal has only two motors, one per side. However, it's more
+         straightforward for Gazebo to simulate as if there's an actuator per wheel. -->
+    <transmission name="${prefix}_wheel_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}_wheel">
+        <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}_actuator">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+  </xacro:macro>
 
 
 
@@ -83,7 +135,7 @@
     <visual>
       <origin xyz="0 0 ${footprint_vertical_offset}" rpy="${pi/2} 0 ${pi/2}"/>
       <geometry>
-        <mesh filename="file://$(find nanovoxmap_example)/meshes/jackal-fenders.stl"/>
+        <mesh filename="package://nanovoxmap_example/meshes/jackal-fenders.stl"/>
       </geometry>
       <material name="yellow" />
     </visual>
@@ -92,62 +144,44 @@
     <parent link="chassis_link" />
     <child link="fenders_link" />
   </joint>
-
+  <gazebo reference="fenders_link">
+    <material>Gazebo/Yellow</material>
+  </gazebo>
 
   <link name="mid_mount"></link>
   <joint name="mid_mount_joint" type="fixed">
     <parent link="chassis_link" />
     <child link="mid_mount" />
     <origin xyz="0 0 ${chassis_height}" />
-  </joint>  
+  </joint>
 
 
-  <!-- Gazebo plugin for differential drive -->
+  <!-- Bring in simulation data for Gazebo. -->
   <gazebo>
-    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
-      <odom_publisher_frequency>500</odom_publisher_frequency>
-      <left_joint>rear_left_wheel_joint</left_joint>
-      <left_joint>front_left_wheel_joint</left_joint>
-      <right_joint>rear_right_wheel_joint</right_joint>
-      <right_joint>front_right_wheel_joint</right_joint>
-      <wheel_radius>0.098</wheel_radius>
-      <wheel_separation>0.37559</wheel_separation>
-      <max_linear_velocity>10.0</max_linear_velocity>
-      <max_angular_velocity>10.0</max_angular_velocity>
-      <topic>/jackal/cmd_vel</topic>
-      <child_frame_id>base_link</child_frame_id>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/</robotNamespace>
     </plugin>
   </gazebo>
 
 
-  <!-- Ground truth -->
+  <!-- Ground Truth -->
   <gazebo>
-    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
-      <odom_topic>jackal/ground_truth</odom_topic>
-      <odom_frame>world</odom_frame>
-      <robot_base_frame>base_link</robot_base_frame>
-      <odom_publish_frequency>500</odom_publish_frequency>
-      <dimensions>3</dimensions>
+    <plugin name="jackal_odometry" filename="libgazebo_ros_p3d.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>100.0</updateRate>
+      <frameName>world</frameName>
+      <bodyName>base_link</bodyName>
+      <topicName>jackal/ground_truth</topicName>
+      <gaussianNoise>0.00</gaussianNoise>
+      <xyzOffsets>0 0 0</xyzOffsets>
+      <rpyOffsets>0 0 0</rpyOffsets>
     </plugin>
   </gazebo>
 
-
-  <!-- Joint States publisher -->
-  <gazebo>
-    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
-      <topic>joint_states</topic>
-      <joint_name>front_left_wheel_joint</joint_name>
-      <joint_name>rear_left_wheel_joint</joint_name>
-      <joint_name>front_right_wheel_joint</joint_name>
-      <joint_name>rear_right_wheel_joint</joint_name>
-    </plugin>
-  </gazebo>  
 
   <!-- Lidar -->
-  <xacro:include filename="$(find nanovoxmap_example)/urdf/lidar.xacro" />
+  <xacro:include filename="$(find nanovoxmap_example)/urdf/Lidar.xacro"/>
+  <xacro:include filename="$(find nanovoxmap_example)/urdf/depth_camera.xacro"/>
 
-
-  <!-- Depth Camera -->
-  <xacro:include filename="$(find nanovoxmap_example)/urdf/depth_camera.xacro" />
 
 </robot>

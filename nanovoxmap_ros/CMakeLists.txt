@@ -7,12 +7,13 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(message_filters REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  message_filters
+  nav_msgs
+  roscpp
+  sensor_msgs
+)
 
 set(NANOVOXMAP_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/nanovoxmap")
 if(NOT EXISTS "${NANOVOXMAP_SOURCE_DIR}/CMakeLists.txt")
@@ -27,14 +28,16 @@ set(BUILD_TESTING OFF CACHE BOOL "Build NanoVoxMap tests" FORCE)
 add_subdirectory("${NANOVOXMAP_SOURCE_DIR}"
                  "${CMAKE_CURRENT_BINARY_DIR}/nanovoxmap_core")
 
+catkin_package(
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS geometry_msgs message_filters nav_msgs roscpp sensor_msgs
+)
+
 add_executable(${PROJECT_NAME}_node src/main.cpp src/NanoVoxMapNode.cpp)
-target_include_directories(${PROJECT_NAME}_node PRIVATE include)
-ament_target_dependencies(${PROJECT_NAME}_node
-  rclcpp geometry_msgs sensor_msgs nav_msgs message_filters)
-target_link_libraries(${PROJECT_NAME}_node nanovoxmap::nanovoxmap)
+target_include_directories(${PROJECT_NAME}_node PRIVATE include ${catkin_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}_node nanovoxmap::nanovoxmap ${catkin_LIBRARIES})
 
-install(TARGETS ${PROJECT_NAME}_node DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
-install(FILES LICENSE DESTINATION share/${PROJECT_NAME})
-
-ament_package()
+install(TARGETS ${PROJECT_NAME}_node
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(DIRECTORY config
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
