@@ -1,5 +1,10 @@
 # NanoVoxMap ROS 2 wrapper
 
+
+<p align="center">
+  <img src="media/cow_and_lady_dataset.gif"/>
+</p>
+
 This package wraps [NanoVoxMap](https://github.com/kunalnk123690/nanovoxmap) as a ROS 2 node. It synchronizes a `sensor_msgs/PointCloud2` stream with `nav_msgs/Odometry`, builds an occupancy map, and publishes occupied voxels and an optional ESDF point cloud.
 
 ## Build
