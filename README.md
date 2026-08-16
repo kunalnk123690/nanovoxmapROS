@@ -1,5 +1,9 @@
 # NanoVoxMap ROS 1 Noetic wrapper
 
+<p align="center">
+  <img src="media/cow_and_lady_dataset.gif"/>
+</p>
+
 This branch wraps [NanoVoxMap](https://github.com/kunalnk123690/nanovoxmap) as a ROS 1 Noetic node.
 
 The wrapper synchronizes `sensor_msgs/PointCloud2` with `nav_msgs/Odometry`, integrates occupied and free voxels, and publishes the occupied map and an optional signed ESDF point cloud.
